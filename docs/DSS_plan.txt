@@ -1,0 +1,302 @@
+KẾ HOẠCH ĐỒ ÁN
+THIẾT KẾ HỆ HỖ TRỢ RA QUYẾT ĐỊNH (DSS) DỰ ĐOÁN NGUY CƠ HỌC TẬP CỦA SINH VIÊN BẰNG DYNAMIC BAYESIAN NETWORK VÀ LSTM TRÊN BỘ DỮ LIỆU OULAD
+Thông tin
+Nội dung
+Môn học
+Hệ thống Hỗ trợ Ra quyết định (IS254.R11)
+Nhóm thực hiện
+Nhóm 8
+Thành viên
+Bạch Hồ Bắc (MSSV 23520086)
+Đặng Công An (MSSV 23520002)
+Giảng viên hướng dẫn
+Thầy Nguyễn Hồ Duy Trí
+Phiên bản
+Kế hoạch đồ án, ngày 15/10/2026
+Tóm tắt
+Phát hiện sớm sinh viên có nguy cơ rớt môn hoặc bỏ học giúp cố vấn học tập can thiệp khi còn kịp. Đồ án đề xuất xây dựng một Hệ hỗ trợ ra quyết định (Decision Support System, DSS) dự đoán nguy cơ học tập theo từng tuần trên bộ dữ liệu công khai OULAD (Open University Learning Analytics Dataset). Hai mô hình được xây dựng và so sánh: Mạng Bayesian động (Dynamic Bayesian Network, DBN), minh bạch và giải thích được, và mạng LSTM, mạnh về học chuỗi hành vi theo thời gian. Mô hình được bọc trong dịch vụ FastAPI, đóng gói bằng Docker và hiển thị qua Dashboard phân loại rủi ro Low, Medium, High cho từng sinh viên.
+Tài liệu này là kế hoạch: các kết quả, so sánh hiệu năng và nhận định về mô hình được trình bày dưới dạng giả thuyết cần kiểm chứng, không phải kết luận đã có.
+1. Giới thiệu và mục tiêu
+1.1. Bối cảnh và vấn đề
+Việc nhận diện sinh viên gặp khó khăn thường diễn ra muộn, sau khi đã có điểm giữa kỳ hoặc cuối kỳ, khiến can thiệp kém hiệu quả. Dữ liệu tương tác trên hệ thống quản lý học tập (LMS) và điểm các bài đánh giá được ghi nhận liên tục theo tuần, cho phép dự đoán sớm hơn nếu được khai thác đúng cách.
+1.2. Khoảng trống nghiên cứu
+Nghiên cứu tiền đề (Tan et al., 2026) cho thấy DBN hiệu quả trong dự đoán nguy cơ học tập nhưng chỉ được thực hiện trên dữ liệu nội bộ của một trường đại học do ràng buộc bảo mật (FERPA), nên khó kiểm chứng lại và chưa rõ tính tổng quát. Đồ án này (1) áp dụng phương pháp tương tự trên bộ dữ liệu công khai OULAD để đánh giá tính tổng quát, và (2) so sánh trực tiếp DBN với LSTM trong cùng một quy trình đánh giá.
+1.3. Câu hỏi nghiên cứu và giả thuyết
+RQ1. DBN có đạt hiệu năng dự đoán chấp nhận được trên OULAD, một bộ dữ liệu khác về cấu trúc biến so với dữ liệu gốc của bài báo tiền đề?
+RQ2. Hiệu năng của DBN và LSTM thay đổi thế nào theo thời điểm dự đoán (tuần T)?
+RQ3. Có thể kết hợp hai mô hình trong một DSS (LSTM dự đoán, DBN giải thích) mà vẫn hữu ích cho cố vấn học tập?
+Các giả thuyết ban đầu, có thể bị bác bỏ và sẽ được báo cáo trung thực:
+H1. Ở các tuần đầu (T ≤ 2), DBN ổn định hơn hoặc tương đương LSTM nhờ tri thức miền và khả năng suy luận khi dữ liệu LMS còn ít.
+H2. Từ giữa kỳ (khoảng T ≥ 4), LSTM có F1 và AUC-ROC cao hơn nhờ học được chuỗi hành vi phức tạp.
+H3. DBN cung cấp được giải thích về các yếu tố ảnh hưởng mà LSTM không có sẵn.
+1.4. Mục tiêu
+Xây dựng data pipeline chuyển dữ liệu OULAD thành chuỗi đặc trưng theo tuần (wk_1, ..., wk_N), không rò rỉ thông tin tương lai.
+Huấn luyện và đánh giá DBN, LSTM và mô hình đối chứng trên các chỉ số Accuracy, Precision, Recall, F1-Score, AUC-ROC, theo từng tuần dự đoán.
+Xây dựng DSS gồm backend suy luận (FastAPI), đóng gói (Docker) và Dashboard hiển thị mức rủi ro cho từng sinh viên.
+1.5. Phạm vi
+Trong phạm vi: dữ liệu OULAD, bài toán phân loại nhị phân nguy cơ, dự đoán theo tuần, hai mô hình chính và một mô hình đối chứng, DSS ở mức nguyên mẫu chạy cục bộ. Ngoài phạm vi: triển khai lên môi trường thực tế, dữ liệu định tính, sinh khuyến nghị can thiệp bằng mô hình ngôn ngữ lớn (xem mục 9).
+2. Dữ liệu OULAD
+2.1. Tổng quan bộ dữ liệu
+OULAD là bộ dữ liệu học tập đã được ẩn danh của Open University (Anh), công bố công khai, gồm khoảng 32.593 sinh viên thuộc 7 môn học (module) qua nhiều lượt học (presentation). Dữ liệu gồm 7 bảng CSV:
+Bảng
+Nội dung chính
+Vai trò trong đồ án
+studentInfo
+Giới tính, vùng, trình độ học vấn, nhóm IMD, nhóm tuổi, số lần học lại, số tín chỉ, khuyết tật, kết quả cuối (final_result)
+Đặc trưng nền và nhãn
+studentRegistration
+Ngày đăng ký và hủy đăng ký
+Lọc sinh viên, xác định thời điểm bỏ học
+studentVle
+Số lượt click theo từng ngày, từng tài nguyên VLE
+Đặc trưng tương tác LMS theo tuần
+vle
+Loại hoạt động của tài nguyên (forum, quiz, resource...)
+Phân loại hoạt động
+assessments
+Loại (TMA, CMA, Exam), hạn nộp, trọng số
+Trọng số điểm
+studentAssessment
+Ngày nộp và điểm từng bài
+Đặc trưng điểm theo tuần
+courses
+Độ dài từng lượt học
+Xác định số tuần của môn
+Bảng 1. Các bảng của OULAD và vai trò trong đồ án
+Mốc thời gian trong dữ liệu được tính bằng số ngày so với ngày bắt đầu lượt học, nên có thể quy đổi sang tuần (tuần = ngày / 7). Độ dài các lượt học khác nhau (khoảng 25 đến 40 tuần), vì vậy nhóm sẽ chốt phạm vi tuần đánh giá chung sau bước khám phá dữ liệu.
+2.2. Định nghĩa nhãn
+Nhãn nhị phân At-risk = 1 khi final_result là Fail hoặc Withdrawn, và At-risk = 0 khi là Pass hoặc Distinction. Với sinh viên Withdrawn, nhóm chỉ giữ các tuần trước thời điểm hủy đăng ký và loại những sinh viên hủy trước ngày bắt đầu lượt học vì không có dữ liệu để dự đoán. Phương án thay thế (bài toán 3 lớp: Pass/Distinction, Fail, Withdrawn) được ghi nhận là mở rộng nếu còn thời gian.
+2.3. Xây dựng đặc trưng theo tuần
+Với mỗi sinh viên, mỗi lượt học và mỗi tuần T, chỉ dùng dữ liệu có ngày không vượt quá cuối tuần T để tránh rò rỉ thông tin tương lai. Các đặc trưng dự kiến:
+Clicks_wk: tổng số lượt click trong tuần; thêm biến tích lũy đến tuần T và số ngày có hoạt động.
+Score_wk: điểm trung bình có trọng số của các bài đánh giá đã nộp đến tuần T; số bài đã nộp và số bài trễ hạn hoặc chưa nộp.
+Đặc trưng nền: gender, age_band, highest_education, imd_band, num_of_prev_attempts, studied_credits, disability, code_module.
+2.4. Tiền xử lý
+Xử lý giá trị thiếu: imd_band thiếu được giữ như một nhóm riêng; tuần không có click được gán 0; tuần chưa có điểm được đánh dấu thiếu (cần cho LSTM qua mask và cho DBN qua suy luận với bằng chứng không đầy đủ).
+Rời rạc hóa cho DBN: clicks chia theo phân vị (3 đến 4 mức), điểm chia theo ngưỡng cố định (ví dụ dưới 40, 40–55, 55–70, từ 70 trở lên, bám theo mốc đạt 40 của OULAD). Số mức và ngưỡng được ghi lại như một siêu tham số.
+Chuẩn hóa (log và z-score) cho đầu vào của LSTM và mô hình đối chứng.
+Dữ liệu OULAD đã ẩn danh và được công bố công khai nên không phát sinh vấn đề riêng tư; nhóm vẫn trích dẫn nguồn và giấy phép sử dụng.
+3. Phương pháp
+3.1. Mạng Bayesian động (DBN)
+DBN theo cấu trúc 5 tầng dựa trên tri thức miền của bài báo tiền đề. Vì OULAD không có điểm đầu vào hay GPA tích lũy, nhóm ánh xạ lại các tầng sang biến thực có trong OULAD:
+Tầng
+Tên tầng
+Biến trong OULAD
+1
+Demographic
+gender, age_band, disability, region
+2
+Nền tảng học tập (thay cho điểm đầu vào)
+highest_education, imd_band, num_of_prev_attempts, studied_credits
+3
+Tình trạng học tập hiện tại (thay cho GPA tích lũy)
+Điểm trung bình có trọng số các bài đã nộp đến tuần T, code_module
+4
+Hoạt động LMS theo tuần
+Clicks_wk1..wkT, Score_wk1..wkT (đã rời rạc hóa)
+5
+Biến đích
+At-risk (Pass hoặc Fail)
+Bảng 2. Ánh xạ cấu trúc 5 tầng sang biến OULAD
+Học cấu trúc: Greedy Hill-Climbing với điểm BIC, có ràng buộc thứ tự tầng (chỉ cho phép cạnh từ tầng thấp lên tầng cao và theo chiều thời gian) để giữ tính diễn giải. Để giảm chi phí tính toán khi số biến lớn, nhóm giới hạn số cha tối đa của mỗi nút và có thể gộp tuần theo cửa sổ 2 tuần.
+Học tham số: ước lượng tham số bằng Maximum Likelihood hoặc Bayesian estimator.
+Dữ liệu thiếu: suy luận với bằng chứng không đầy đủ bằng cách marginal hóa các biến không quan sát; khi học tham số từ dữ liệu có thiếu có thể dùng thuật toán EM. Cách này không cần nội suy giá trị thiếu, nhưng không phải là miễn phí về tính toán.
+Triển khai: thư viện pgmpy. Nhóm sẽ làm rõ trong báo cáo mức độ "động" của mô hình (cấu trúc theo lát cắt thời gian dạng wide-format so với mạng chuyển tiếp 2-TBN).
+3.2. LSTM
+Đầu vào: tensor 3 chiều (batch_size, timesteps, features) với các đặc trưng theo tuần; đặc trưng nền được lặp lại ở mỗi bước hoặc nối vào lớp đầu ra.
+Đầu ra: xác suất P(Fail) tại mỗi tuần (kiểu many-to-many), nên cùng một mô hình trả về dự đoán cho mọi tuần T và phục vụ trực tiếp bài toán dự đoán sớm.
+Huấn luyện: PyTorch, hàm mất mát cross-entropy nhị phân có trọng số lớp, mask cho các tuần sau khi sinh viên đã rời môn, early stopping trên tập validation, điều chỉnh siêu tham số (số lớp, kích thước ẩn, dropout, learning rate) trên validation.
+3.3. Mô hình đối chứng
+Để biết DBN và LSTM có thật sự đáng đầu tư, nhóm thêm một mô hình đối chứng đơn giản (Logistic Regression hoặc Random Forest) trên các đặc trưng tích lũy đến tuần T. Đây là mức nền để so sánh, không phải trọng tâm của đồ án.
+4. Thiết kế thực nghiệm và đánh giá
+Chia dữ liệu: chia theo sinh viên (grouped split theo id_student), không chia theo từng dòng, để cùng một sinh viên không xuất hiện đồng thời ở train và test. Dùng kiểm định chéo 5-fold có phân tầng theo nhãn; báo cáo trung bình và độ lệch chuẩn.
+Kiểm tra tổng quát theo thời gian (thực nghiệm bổ sung): huấn luyện trên các lượt học cũ hơn, kiểm tra trên lượt học mới hơn.
+Mất cân bằng lớp: kiểm tra tỷ lệ nhãn thực tế, dùng trọng số lớp hoặc lấy mẫu lại trên tập train, tuyệt đối không can thiệp tập test.
+Chỉ số: Accuracy, Precision, Recall (Sensitivity), F1-Score, AUC-ROC; bổ sung AUC-PR vì lớp At-risk có thể lệch. Với DSS cảnh báo sớm, Recall của lớp At-risk được ưu tiên theo dõi.
+Dự đoán sớm: đánh giá riêng tại các tuần mốc T ∈ {1, 2, 4, 6, 8, 10, 12, 16, 20} (điều chỉnh theo độ dài lượt học), vẽ đường cong chỉ số theo T cho từng mô hình.
+Ngưỡng và hiệu chỉnh xác suất: chọn ngưỡng trên tập validation; kiểm tra độ hiệu chỉnh (calibration) vì xác suất được dùng trực tiếp để phân mức rủi ro.
+Kiểm chứng giả thuyết: so sánh DBN và LSTM theo từng T; nếu kết quả trái giả thuyết thì ghi nhận và phân tích nguyên nhân.
+5. Kiến trúc hệ thống DSS
+Luồng dữ liệu: OULAD → Data Pipeline và Feature Prep → FastAPI Inference (DBN, LSTM) → Dashboard. Kiến trúc được ánh xạ sang các thành phần kinh điển của một DSS:
+Thành phần DSS
+Hiện thực trong đồ án
+Công nghệ
+Quản lý dữ liệu
+Pipeline làm sạch, tạo đặc trưng theo tuần, lưu bảng đặc trưng
+Python, pandas
+Quản lý mô hình
+Hai engine DBN và LSTM, lưu và nạp mô hình đã huấn luyện
+pgmpy, PyTorch
+Dịch vụ suy luận
+REST API trả về xác suất và mức rủi ro
+FastAPI
+Giao diện người dùng
+Dashboard cho cố vấn học tập và giảng viên
+Streamlit
+Đóng gói
+Cô lập môi trường chạy, khởi động bằng một lệnh
+Docker, docker-compose
+Bảng 3. Các thành phần của DSS
+5.1. Backend suy luận (FastAPI)
+POST /predict/dbn: nhận mã sinh viên, môn, lượt học và tuần T; trả về P(Fail), mức rủi ro và các yếu tố ảnh hưởng chính.
+POST /predict/lstm: trả về P(Fail) và xu hướng qua các tuần.
+GET /health: kiểm tra dịch vụ. Dữ liệu đầu vào được kiểm tra bằng schema (Pydantic).
+5.2. Phân mức rủi ro
+Ngưỡng khởi đầu: Low khi P(Fail) < 0,3; Medium khi 0,3 ≤ P(Fail) < 0,6; High khi P(Fail) ≥ 0,6. Ngưỡng sẽ được hiệu chỉnh trên tập validation, ví dụ chọn ngưỡng High để đạt mức Recall mong muốn với số cảnh báo sai chấp nhận được.
+5.3. Dashboard
+Tổng quan rủi ro: số sinh viên ở mức Low, Medium, High theo môn và theo tuần.
+Danh sách cảnh báo sớm: sinh viên có P(Fail) vượt ngưỡng ở tuần hiện tại, sắp xếp theo mức rủi ro để cố vấn liên hệ.
+Phân tích nguyên nhân: lịch sử click LMS và điểm theo tuần của từng sinh viên, kèm các yếu tố ảnh hưởng từ DBN, giúp phân biệt sinh viên ít truy cập LMS với sinh viên điểm thấp.
+5.4. Vai trò của hai mô hình trong DSS
+Giả định ban đầu: mô hình có hiệu năng tốt hơn ở thời điểm tương ứng được dùng để dự đoán chính, còn DBN cung cấp phần giải thích. Lựa chọn cuối cùng sẽ dựa trên kết quả thực nghiệm ở mục 6.
+6. Kết quả thực nghiệm (bảng mẫu, sẽ cập nhật)
+Bảng dưới đây chỉ là khung; các ô sẽ được điền sau khi chạy thực nghiệm trên tập test (trung bình ± độ lệch chuẩn qua các fold).
+Tuần
+Mô hình
+Accuracy
+Precision
+Recall
+F1
+AUC-ROC
+T = 2
+DBN
+—
+—
+—
+—
+—
+T = 2
+LSTM
+—
+—
+—
+—
+—
+T = 2
+Đối chứng
+—
+—
+—
+—
+—
+T = 8
+DBN
+—
+—
+—
+—
+—
+T = 8
+LSTM
+—
+—
+—
+—
+—
+T = 8
+Đối chứng
+—
+—
+—
+—
+—
+T = 16
+DBN
+—
+—
+—
+—
+—
+T = 16
+LSTM
+—
+—
+—
+—
+—
+T = 16
+Đối chứng
+—
+—
+—
+—
+—
+Bảng 4. Khung bảng benchmark (chưa có số liệu)
+Phần nhận xét sẽ đối chiếu kết quả với các giả thuyết H1, H2, H3 ở mục 1.3.
+7. Kế hoạch thực hiện
+7.1. Mức ưu tiên
+Mức
+Hạng mục
+Bắt buộc (must-have)
+Data pipeline theo tuần; DBN; LSTM; benchmark theo tuần T; báo cáo
+Nên có (should-have)
+Mô hình đối chứng; FastAPI; Dashboard với 3 chức năng
+Nếu còn thời gian (nice-to-have)
+Docker hóa toàn bộ bằng docker-compose; kiểm tra tổng quát theo thời gian; bài toán 3 lớp
+7.2. Tiến độ dự kiến
+Tiến độ tính theo tuần kể từ ngày bắt đầu và sẽ được căn lại theo hạn nộp thực tế của môn học.
+Tuần
+Công việc
+Sản phẩm
+1
+Nghiên cứu tài liệu, tải và khám phá OULAD, chốt định nghĩa nhãn và phạm vi tuần
+Ghi chú dữ liệu, thống kê mô tả
+2
+Tiền xử lý, tạo đặc trưng theo tuần, rời rạc hóa, chia dữ liệu
+Bảng đặc trưng, script pipeline
+3
+Mô hình đối chứng và DBN (học cấu trúc, tham số, suy luận)
+DBN đã huấn luyện, kết quả sơ bộ
+4
+LSTM, điều chỉnh siêu tham số
+LSTM đã huấn luyện
+5
+Benchmark theo tuần T, hiệu chỉnh ngưỡng rủi ro, phân tích kết quả
+Bảng và biểu đồ kết quả
+6
+FastAPI và đóng gói Docker
+Dịch vụ suy luận chạy được
+7
+Dashboard và kiểm thử tích hợp
+Nguyên mẫu DSS
+8
+Hoàn thiện báo cáo, slide, demo
+Báo cáo cuối kỳ, bản demo
+7.3. Phân công (đề xuất, nhóm điều chỉnh)
+Thành viên
+Phụ trách chính
+Bạch Hồ Bắc
+Data pipeline và đặc trưng theo tuần; mô hình DBN; phần phương pháp luận trong báo cáo
+Đặng Công An
+Mô hình LSTM và đối chứng; FastAPI, Docker, Dashboard
+Cả nhóm
+Thiết kế thực nghiệm, benchmark và phân tích kết quả, báo cáo, slide, demo; review chéo mã nguồn
+8. Rủi ro và giải pháp
+Rủi ro
+Giải pháp
+Rò rỉ thông tin tương lai khi tạo đặc trưng theo tuần
+Chỉ dùng dữ liệu có ngày không vượt quá cuối tuần T; kiểm tra bằng test đơn vị trên vài sinh viên mẫu
+Cùng sinh viên xuất hiện ở train và test
+Chia theo id_student
+Mất cân bằng lớp, Accuracy gây hiểu lầm
+Báo cáo thêm Recall, F1, AUC-PR; dùng trọng số lớp
+DBN học cấu trúc chậm khi có nhiều biến (số tuần × số biến)
+Giới hạn số cha, gộp tuần theo cửa sổ, giới hạn T tối đa khi học cấu trúc
+Rời rạc hóa làm mất thông tin, ảnh hưởng kết quả DBN
+Thử vài cách chia mức và báo cáo độ nhạy
+LSTM quá khớp trên dữ liệu vừa phải
+Dropout, early stopping, kiểm định chéo
+Thiếu thời gian cho Docker và Dashboard
+Theo thứ tự ưu tiên ở mục 7.1; chốt phần bắt buộc trước
+Giả thuyết không được kiểm chứng
+Báo cáo trung thực và phân tích nguyên nhân
+9. Hướng phát triển
+Bổ sung dữ liệu định tính (nhận xét của cố vấn, khảo sát động lực học tập) nếu có nguồn dữ liệu phù hợp.
+Thử nghiệm mô hình ngôn ngữ lớn (ví dụ tinh chỉnh LoRA) để tự động sinh văn bản khuyến nghị can thiệp; chỉ là ý tưởng mở rộng, không nằm trong cam kết của đồ án.
+Mở rộng sang bài toán 3 lớp và mô hình chuyển tiếp 2-TBN đầy đủ.
+10. Tài liệu tham khảo
+Kuzilek, J., Hlosta, M., Zdrahal, Z. (2017). Open University Learning Analytics dataset. Scientific Data, 4, 170171.
+Tan et al. (2026). Bài báo tiền đề về DBN dự đoán nguy cơ học tập (nhóm bổ sung thông tin trích dẫn đầy đủ).
+Hochreiter, S., Schmidhuber, J. (1997). Long Short-Term Memory. Neural Computation, 9(8), 1735–1780.
+Murphy, K. (2002). Dynamic Bayesian Networks: Representation, Inference and Learning. Luận án tiến sĩ, UC Berkeley.
+Tài liệu thư viện pgmpy, PyTorch và FastAPI (tài liệu chính thức).
