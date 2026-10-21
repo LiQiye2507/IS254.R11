@@ -34,7 +34,7 @@ data/
 
 ## 2. Quy mô tập dữ liệu huấn luyện (`clean_data.csv`)
 
-* **Tổng số dòng:** **173.861 dòng** (Thỏa mãn và vượt xa yêu cầu tối thiểu **40.000 dòng** của môn học).
+* **Tổng số dòng:** **173.861 dòng** 
 * **Tổng số cột thuộc tính:** **28 cột**.
 * **Giá trị thiếu (Missing values):** **0** (Đã được xử lý 100%).
 * **Tỷ lệ nhãn mục tiêu:**
@@ -68,41 +68,41 @@ Quy trình ETL được thiết kế tự động qua 5 bước chính:
 
 ## 4. Từ điển dữ liệu (Data Dictionary) của `clean_data.csv`
 
-| STT | Tên cột | Kiểu dữ liệu | Ý nghĩa trong Hệ DSS |
-| :---: | :--- | :---: | :--- |
-| **I** | **Nhóm Định danh & Khóa** | | |
-| 1 | `id_student` | Integer | Mã số định danh sinh viên |
-| 2 | `code_module` | String | Mã môn học (AAA, BBB, CCC, DDD, EEE, FFF, GGG) |
-| 3 | `code_presentation` | String | Mã học kỳ (ví dụ: 2013B, 2013J, 2014B, 2014J) |
-| 4 | `id_assessment` | Integer | Mã bài kiểm tra / đánh giá |
-| **II** | **Nhóm Nhân khẩu học & Nền tảng (Demographic)** | | |
-| 5 | `gender` | Category | Giới tính sinh viên (M: Nam, F: Nữ) |
-| 6 | `region` | String | Vùng địa lý sinh sống của sinh viên |
-| 7 | `highest_education` | String | Trình độ học vấn cao nhất trước khi vào học |
-| 8 | `imd_band` | String | Chỉ số thiếu thốn kinh tế xã hội (0-10% ... 90-100%, Unknown) |
-| 9 | `age_band` | String | Nhóm tuổi của sinh viên (0-35, 35-55, 55<=) |
-| 10 | `num_of_prev_attempts` | Integer | Số lần sinh viên đã từng học lại môn này |
-| 11 | `studied_credits` | Integer | Tổng số tín chỉ sinh viên đang đăng ký học cùng lúc |
-| 12 | `disability` | Category | Sinh viên có khuyết tật hay không (Y/N) |
-| **III** | **Nhóm Bài đánh giá hiện tại (Current Assessment)** | | |
-| 13 | `assessment_type` | Category | Loại bài: TMA (chấm bởi trợ giảng), CMA (trắc nghiệm máy tính), Exam (thi cuối kỳ) |
-| 14 | `weight` | Float | Trọng số phần trăm của bài kiểm tra trong môn (0 – 100%) |
-| 15 | `assessment_order` | Integer | Thứ tự bài nộp của sinh viên trong môn (bài thứ 1, 2, 3...) |
-| 16 | `submission_week` | Integer | Tuần nộp bài của sinh viên |
-| 17 | `submission_delay` | Float | Số ngày nộp lệch hạn (Âm: nộp sớm, Dương: nộp trễ hạn) |
-| 18 | `is_late` | Binary (0/1) | Sinh viên nộp trễ hạn hay không (1 = Trễ, 0 = Đúng hạn) |
-| 19 | `is_banked` | Binary (0/1) | Bài thi có được bảo lưu điểm từ kỳ trước hay không |
-| 20 | `score` | Float | Điểm số đạt được của bài nộp hiện tại (0.0 – 100.0) |
-| 21 | `is_passed_assessment` | Binary (0/1) | Bài thi có đạt điểm qua môn hay không ($\ge 40$ điểm) |
-| **IV** | **Nhóm Tiến độ Tích lũy (Cumulative History - Hỗ trợ Cảnh báo Sớm)** | | |
-| 22 | `prior_assessments_count` | Integer | Số lượng bài kiểm tra sinh viên đã hoàn thành trước bài này |
-| 23 | `prior_avg_score` | Float | Điểm trung bình cộng của các bài đã nộp trước đó |
-| 24 | `prior_late_count` | Integer | Tổng số lần nộp bài trễ trước bài này |
-| 25 | `prior_fail_count` | Integer | Tổng số lần thi rớt các bài trước đó |
-| 26 | `score_progress` | Float | Độ tiến bộ điểm số so với trung bình các bài trước |
-| **V** | **Nhóm Nhãn Mục tiêu (Target Labels)** | | |
-| 27 | `final_result` | Category | Kết quả cuối kỳ gốc (Pass, Distinction, Fail, Withdrawn) |
-| 28 | `at_risk` | Binary (0/1) | **Nhãn dự đoán rủi ro:** 1 = Nguy cơ (Fail/Withdrawn), 0 = Đậu môn (Pass/Distinction) |
+|   STT   | Tên cột                                                              | Kiểu dữ liệu | Ý nghĩa trong Hệ DSS                                                                  |
+| :-----: | :------------------------------------------------------------------- | :----------: | :------------------------------------------------------------------------------------ |
+|  **I**  | **Nhóm Định danh & Khóa**                                            |              |                                                                                       |
+|    1    | `id_student`                                                         |   Integer    | Mã số định danh sinh viên                                                             |
+|    2    | `code_module`                                                        |    String    | Mã môn học (AAA, BBB, CCC, DDD, EEE, FFF, GGG)                                        |
+|    3    | `code_presentation`                                                  |    String    | Mã học kỳ (ví dụ: 2013B, 2013J, 2014B, 2014J)                                         |
+|    4    | `id_assessment`                                                      |   Integer    | Mã bài kiểm tra / đánh giá                                                            |
+| **II**  | **Nhóm Nhân khẩu học & Nền tảng (Demographic)**                      |              |                                                                                       |
+|    5    | `gender`                                                             |   Category   | Giới tính sinh viên (M: Nam, F: Nữ)                                                   |
+|    6    | `region`                                                             |    String    | Vùng địa lý sinh sống của sinh viên                                                   |
+|    7    | `highest_education`                                                  |    String    | Trình độ học vấn cao nhất trước khi vào học                                           |
+|    8    | `imd_band`                                                           |    String    | Chỉ số thiếu thốn kinh tế xã hội (0-10% ... 90-100%, Unknown)                         |
+|    9    | `age_band`                                                           |    String    | Nhóm tuổi của sinh viên (0-35, 35-55, 55<=)                                           |
+|   10    | `num_of_prev_attempts`                                               |   Integer    | Số lần sinh viên đã từng học lại môn này                                              |
+|   11    | `studied_credits`                                                    |   Integer    | Tổng số tín chỉ sinh viên đang đăng ký học cùng lúc                                   |
+|   12    | `disability`                                                         |   Category   | Sinh viên có khuyết tật hay không (Y/N)                                               |
+| **III** | **Nhóm Bài đánh giá hiện tại (Current Assessment)**                  |              |                                                                                       |
+|   13    | `assessment_type`                                                    |   Category   | Loại bài: TMA (chấm bởi trợ giảng), CMA (trắc nghiệm máy tính), Exam (thi cuối kỳ)    |
+|   14    | `weight`                                                             |    Float     | Trọng số phần trăm của bài kiểm tra trong môn (0 – 100%)                              |
+|   15    | `assessment_order`                                                   |   Integer    | Thứ tự bài nộp của sinh viên trong môn (bài thứ 1, 2, 3...)                           |
+|   16    | `submission_week`                                                    |   Integer    | Tuần nộp bài của sinh viên                                                            |
+|   17    | `submission_delay`                                                   |    Float     | Số ngày nộp lệch hạn (Âm: nộp sớm, Dương: nộp trễ hạn)                                |
+|   18    | `is_late`                                                            | Binary (0/1) | Sinh viên nộp trễ hạn hay không (1 = Trễ, 0 = Đúng hạn)                               |
+|   19    | `is_banked`                                                          | Binary (0/1) | Bài thi có được bảo lưu điểm từ kỳ trước hay không                                    |
+|   20    | `score`                                                              |    Float     | Điểm số đạt được của bài nộp hiện tại (0.0 – 100.0)                                   |
+|   21    | `is_passed_assessment`                                               | Binary (0/1) | Bài thi có đạt điểm qua môn hay không ($\ge 40$ điểm)                                 |
+| **IV**  | **Nhóm Tiến độ Tích lũy (Cumulative History - Hỗ trợ Cảnh báo Sớm)** |              |                                                                                       |
+|   22    | `prior_assessments_count`                                            |   Integer    | Số lượng bài kiểm tra sinh viên đã hoàn thành trước bài này                           |
+|   23    | `prior_avg_score`                                                    |    Float     | Điểm trung bình cộng của các bài đã nộp trước đó                                      |
+|   24    | `prior_late_count`                                                   |   Integer    | Tổng số lần nộp bài trễ trước bài này                                                 |
+|   25    | `prior_fail_count`                                                   |   Integer    | Tổng số lần thi rớt các bài trước đó                                                  |
+|   26    | `score_progress`                                                     |    Float     | Độ tiến bộ điểm số so với trung bình các bài trước                                    |
+|  **V**  | **Nhóm Nhãn Mục tiêu (Target Labels)**                               |              |                                                                                       |
+|   27    | `final_result`                                                       |   Category   | Kết quả cuối kỳ gốc (Pass, Distinction, Fail, Withdrawn)                              |
+|   28    | `at_risk`                                                            | Binary (0/1) | **Nhãn dự đoán rủi ro:** 1 = Nguy cơ (Fail/Withdrawn), 0 = Đậu môn (Pass/Distinction) |
 
 ---
 
