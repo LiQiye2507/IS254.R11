@@ -1,0 +1,36 @@
+{
+  "week_t": 8,
+  "prob_at_risk": 0.8591,
+  "risk_level": "High",
+  "top_factors": [
+    {
+      "factor": "perf_S3",
+      "value": "F_lt40",
+      "delta_prob": 0.3642
+    },
+    {
+      "factor": "perf_S2",
+      "value": "CB_55_70",
+      "delta_prob": -0.1144
+    },
+    {
+      "factor": "imd_group",
+      "value": "Low_0_30",
+      "delta_prob": 0.1075
+    },
+    {
+      "factor": "code_module",
+      "value": "AAA",
+      "delta_prob": -0.045
+    },
+    {
+      "factor": "age_band",
+      "value": "35-55",
+      "delta_prob": -0.0269
+    }
+  ],
+  "id_student": 74372,
+  "code_module": "AAA",
+  "code_presentation": "2013J",
+  "actual_final_result": "Fail"
+}
