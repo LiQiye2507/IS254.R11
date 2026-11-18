@@ -1,36 +1,36 @@
 {
   "week_t": 8,
-  "prob_at_risk": 0.7463,
+  "prob_at_risk": 0.9094,
   "risk_level": "High",
   "top_factors": [
     {
-      "factor": "perf_S3",
-      "value": "Missed_0",
-      "delta_prob": 0.1818
+      "factor": "click_S3",
+      "value": "C0_None",
+      "delta_prob": 0.1626
     },
     {
       "factor": "code_module",
-      "value": "BBB",
-      "delta_prob": -0.0578
-    },
-    {
-      "factor": "prev_attempts_bin",
-      "value": "2+",
-      "delta_prob": 0.0391
-    },
-    {
-      "factor": "click_S3",
-      "value": "C1_Low",
-      "delta_prob": -0.0238
+      "value": "AAA",
+      "delta_prob": -0.0692
     },
     {
       "factor": "age_band",
-      "value": "0-35",
-      "delta_prob": 0.0048
+      "value": "35-55",
+      "delta_prob": 0.0055
+    },
+    {
+      "factor": "highest_education",
+      "value": "A Level or Equivalent",
+      "delta_prob": 0.0041
+    },
+    {
+      "factor": "imd_group",
+      "value": "High_60_100",
+      "delta_prob": 0.0022
     }
   ],
-  "id_student": 58089,
-  "code_module": "BBB",
-  "code_presentation": "2013B",
-  "actual_final_result": "Fail"
+  "id_student": 1456619,
+  "code_module": "AAA",
+  "code_presentation": "2013J",
+  "actual_final_result": "Withdrawn"
 }

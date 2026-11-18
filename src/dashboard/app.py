@@ -479,6 +479,7 @@ with tab4:
             for m_code, lbl, clr in [
                 ("DBN", "DBN (5-Tier)", "#e74c3c"),
                 ("LSTM", "LSTM (Masked)", "#2980b9"),
+                ("Hybrid", "Hybrid (DBN + LSTM)", "#8e44ad"),
                 ("Baseline_RF", "Baseline (RF)", "#27ae60"),
                 ("Baseline_LR", "Baseline (LR)", "#7f8c8d"),
             ]:
@@ -498,6 +499,7 @@ with tab4:
             for m_code, lbl, clr in [
                 ("DBN", "DBN (5-Tier)", "#e74c3c"),
                 ("LSTM", "LSTM (Masked)", "#2980b9"),
+                ("Hybrid", "Hybrid (DBN + LSTM)", "#8e44ad"),
                 ("Baseline_RF", "Baseline (RF)", "#27ae60"),
                 ("Baseline_LR", "Baseline (LR)", "#7f8c8d"),
             ]:

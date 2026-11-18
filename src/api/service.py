@@ -6,6 +6,7 @@ truy vấn dự báo cá nhân, phân tích tổng quan khóa học (Cohort Over
 danh sách cảnh báo sớm (Watchlist) và giải thích nhân quả (Explainable AI).
 """
 
+import json
 import os
 import sys
 import joblib
@@ -85,8 +86,9 @@ class DSSInferenceEngine:
         models_dir = os.path.join(PROJECT_ROOT, 'models')
         dbn_path = os.path.join(models_dir, 'dbn_5tier.joblib')
         lstm_path = os.path.join(models_dir, 'lstm_masked.pt')
+        hybrid_path = os.path.join(models_dir, 'hybrid_weights.json')
 
-        if not os.path.exists(dbn_path) or not os.path.exists(lstm_path):
+        if not all(os.path.exists(p) for p in (dbn_path, lstm_path, hybrid_path)):
             raise FileNotFoundError(
                 "Chưa tìm thấy trọng số mô hình trong thư mục `models/`. "
                 "Vui lòng chạy `python src/models/benchmark.py` trước."
@@ -103,8 +105,10 @@ class DSSInferenceEngine:
             for r in self.enrollments[['code_module', 'code_presentation', 'id_student', 'enr_idx']].itertuples(index=False)
         }
 
-        # 2. Nạp mô hình DBN 5 tầng
+        # 2. Nạp mô hình DBN 5 tầng và trọng số Hybrid (trọng số DBN theo mốc tuần, chọn trên Validation)
         self.dbn_clf = joblib.load(dbn_path)
+        with open(hybrid_path, encoding='utf-8') as f:
+            self.hybrid_dbn_weight = {int(w): float(a) for w, a in json.load(f).items()}
 
         # 3. Nạp mô hình Masked Many-to-Many LSTM & tính sẵn ma trận xác suất (N, 20) siêu tốc
         ckpt = torch.load(lstm_path, map_location='cpu', weights_only=False)
@@ -150,6 +154,10 @@ class DSSInferenceEngine:
                 self.enrollments, self.grid, week_t
             )
         return self._snap_week_cache[week_t]
+
+    def _hybrid_weight(self, week_t: int) -> float:
+        # Trọng số của mốc tuần đánh giá gần nhất <= T (T=1 dùng mốc T=2)
+        return self.hybrid_dbn_weight[max([2] + [w for w in self.hybrid_dbn_weight if w <= week_t])]
 
     def _get_dbn_probs_for_week(self, week_t: int) -> np.ndarray:
         eff_w = dbn_effective_week(week_t)
@@ -202,8 +210,7 @@ class DSSInferenceEngine:
         elif model_source == "lstm":
             probs = p_lstm
         else:
-            # Hybrid DSS (RQ3): Đầu kỳ (T <= 2) ưu tiên độ ổn định/nhạy của DBN; từ T >= 3 ưu tiên chuỗi LSTM
-            w_dbn = 0.60 if week_t <= 2 else 0.25
+            w_dbn = self._hybrid_weight(week_t)
             probs = w_dbn * p_dbn + (1.0 - w_dbn) * p_lstm
 
         snap['prob_lstm'] = np.round(p_lstm, 4)
@@ -336,12 +343,9 @@ class DSSInferenceEngine:
         res_dbn = self.predict_dbn(id_student, code_module, code_presentation, week_t, low_th, high_th)
         res_lstm = self.predict_lstm(id_student, code_module, code_presentation, week_t, low_th, high_th)
 
-        if week_t <= 2:
-            primary = "DBN_5Tier (Ưu tiên đầu kỳ T <= 2 theo H1)"
-            prob_hybrid = 0.60 * res_dbn['prob_at_risk'] + 0.40 * res_lstm['prob_at_risk']
-        else:
-            primary = "LSTM_Masked + Giải thích nhân quả DBN (T >= 3 theo H2 & H3)"
-            prob_hybrid = 0.75 * res_lstm['prob_at_risk'] + 0.25 * res_dbn['prob_at_risk']
+        w_dbn = self._hybrid_weight(week_t)
+        primary = f"Hybrid: {1 - w_dbn:.0%} LSTM + {w_dbn:.0%} DBN (trọng số chọn trên Validation) + giải thích DBN"
+        prob_hybrid = w_dbn * res_dbn['prob_at_risk'] + (1 - w_dbn) * res_lstm['prob_at_risk']
 
         risk_level = classify_risk_tier(prob_hybrid, low_th, high_th)
         enr_row = self.enrollments.iloc[idx]

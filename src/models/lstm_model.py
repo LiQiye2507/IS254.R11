@@ -16,8 +16,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from sklearn.compose import ColumnTransformer
-from sklearn.metrics import f1_score, roc_auc_score
-from sklearn.model_selection import GroupShuffleSplit
+from sklearn.metrics import roc_auc_score
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -97,7 +96,6 @@ class MaskedLSTMTrainer:
         self.seq_std = None
         self.model = None
         self.pos_weight_val = 1.0
-        self.thresholds_by_week = {}
 
     def _set_seed(self):
         torch.manual_seed(self.random_state)
@@ -107,19 +105,15 @@ class MaskedLSTMTrainer:
 
     def fit(
         self,
-        enr_train: pd.DataFrame,
+        enr_sub: pd.DataFrame,
         seq_train: np.ndarray,
         mask_train: np.ndarray,
+        enr_val: pd.DataFrame,
+        seq_val: np.ndarray,
         eval_weeks=(2, 4, 8, 12, 16, 20),
     ):
+        """Huấn luyện trên (enr_sub, seq_train); early stopping theo AUC-ROC trên tập validation (enr_val, seq_val)."""
         self._set_seed()
-
-        # Tách 15% sinh viên từ tập Train làm Validation (theo id_student - chống rò rỉ)
-        gss = GroupShuffleSplit(n_splits=1, test_size=0.15, random_state=self.random_state)
-        sub_tr_idx, val_idx = next(gss.split(enr_train, enr_train['at_risk'], groups=enr_train['id_student']))
-
-        enr_sub = enr_train.iloc[sub_tr_idx].reset_index(drop=True)
-        enr_val = enr_train.iloc[val_idx].reset_index(drop=True)
 
         # Chuẩn hóa đặc trưng nền (chỉ fit trên sub_train)
         self.static_prep = ColumnTransformer(
@@ -133,15 +127,15 @@ class MaskedLSTMTrainer:
         X_stat_val = self.static_prep.transform(enr_val[STATIC_CAT_COLS + STATIC_NUM_COLS]).astype(np.float32)
 
         # Chuẩn hóa z-score đặc trưng chuỗi (chỉ fit trên sub_train)
-        X_seq_raw_tr = seq_train[sub_tr_idx]
-        X_seq_raw_val = seq_train[val_idx]
+        X_seq_raw_tr = seq_train
+        X_seq_raw_val = seq_val
         self.seq_mean = X_seq_raw_tr.mean(axis=(0, 1), keepdims=True)
         self.seq_std = np.maximum(X_seq_raw_tr.std(axis=(0, 1), keepdims=True), 1e-5)
 
         X_seq_tr = ((X_seq_raw_tr - self.seq_mean) / self.seq_std).astype(np.float32)
         X_seq_val = ((X_seq_raw_val - self.seq_mean) / self.seq_std).astype(np.float32)
 
-        M_tr = mask_train[sub_tr_idx].astype(np.float32)
+        M_tr = mask_train.astype(np.float32)
         y_tr = enr_sub['at_risk'].to_numpy(dtype=np.float32)
         y_val = enr_val['at_risk'].to_numpy(dtype=np.float32)
 
@@ -222,23 +216,6 @@ class MaskedLSTMTrainer:
 
         if best_state is not None:
             self.model.load_state_dict(best_state)
-
-        # Tối ưu ngưỡng phân loại F1 trên tập Validation cho từng tuần mốc (mục 4 DSS_plan.docx)
-        self.model.eval()
-        with torch.no_grad():
-            val_logits = self.model(t_seq_val, t_stat_val).cpu().numpy()
-        val_probs = 1.0 / (1.0 + np.exp(-(val_logits - np.log(self.pos_weight_val))))
-
-        for w in eval_weeks:
-            p_w = val_probs[:, w - 1]
-            best_th, best_f1 = 0.42, -1.0
-            for th in np.linspace(0.41, 0.56, 31):
-                f1 = f1_score(y_val, (p_w >= th).astype(int), zero_division=0)
-                if f1 > best_f1:
-                    best_f1 = f1
-                    best_th = float(th)
-            self.thresholds_by_week[w] = best_th
-
         return self
 
     def predict_proba_all_weeks(self, enr_df: pd.DataFrame, seq_arr: np.ndarray) -> np.ndarray:

@@ -20,7 +20,6 @@ Thiết kế bám sát Mục 3.1, Giả thuyết H1 & H3 trong Đề cương (DS
 import warnings
 import numpy as np
 import pandas as pd
-from sklearn.metrics import f1_score
 from pgmpy.models import DiscreteBayesianNetwork
 from pgmpy.causal_discovery import ExpertKnowledge
 from pgmpy.estimators import HillClimbSearch, BayesianEstimator
@@ -85,7 +84,6 @@ class FiveTierDBNClassifier:
         self.infer: VariableElimination | None = None
         self.learned_edges = []
         self.state_names = {}
-        self.thresholds_by_week = {}
 
     def _prepare_categorical_df(self, df: pd.DataFrame, is_train: bool = False) -> pd.DataFrame:
         out = _add_bg_readiness_column(df)
@@ -101,7 +99,7 @@ class FiveTierDBNClassifier:
             out[col] = pd.Categorical(out[col], categories=self.state_names.get(col, sorted(out[col].unique())))
         return out
 
-    def fit(self, dbn_train_df: pd.DataFrame, eval_weeks=(2, 4, 8, 12, 16, 20)):
+    def fit(self, dbn_train_df: pd.DataFrame):
         train_cat = self._prepare_categorical_df(dbn_train_df, is_train=True)
 
         # Thiết lập thứ tự tầng nghiêm ngặt (Tầng 1 -> 2 -> 3 -> S1..S6 -> Tầng 5 at_risk)
@@ -162,22 +160,6 @@ class FiveTierDBNClassifier:
         self.bn.add_cpds(*cpds)
         self.bn.check_model()
         self.infer = VariableElimination(self.bn)
-
-        # Chọn ngưỡng phân loại Bayes-consistent (th >= prior ~ 0.41) tối ưu cân bằng F1 & độ nhạy trên Validation
-        rng = np.random.RandomState(42)
-        val_sample_idx = rng.choice(len(dbn_train_df), size=min(2500, len(dbn_train_df)), replace=False)
-        val_sub = dbn_train_df.iloc[val_sample_idx].reset_index(drop=True)
-        y_val = val_sub['at_risk'].astype(int).to_numpy()
-        for w in eval_weeks:
-            p_w = self.predict_proba_at_week(val_sub, w)
-            best_th, best_f1 = 0.42, -1.0
-            for th in np.linspace(0.41, 0.56, 31):
-                f1 = f1_score(y_val, (p_w >= th).astype(int), zero_division=0)
-                if f1 > best_f1:
-                    best_f1 = f1
-                    best_th = float(th)
-            self.thresholds_by_week[w] = best_th
-
         return self
 
     def _active_evidence_cols(self, week_t: int, boundary_only: bool = True) -> list[str]:
