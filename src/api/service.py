@@ -50,6 +50,12 @@ FACTOR_LABELS = {
     'disc_S5': 'Kỷ luật nộp bài Tuần 13–16 (S5)',
     'perf_S6': 'Điểm đánh giá Tuần 17–20 (S6)',
     'disc_S6': 'Kỷ luật nộp bài Tuần 17–20 (S6)',
+    'click_S1': 'Mức truy cập LMS Tuần 1–2 (S1)',
+    'click_S2': 'Mức truy cập LMS Tuần 3–4 (S2)',
+    'click_S3': 'Mức truy cập LMS Tuần 5–8 (S3)',
+    'click_S4': 'Mức truy cập LMS Tuần 9–12 (S4)',
+    'click_S5': 'Mức truy cập LMS Tuần 13–16 (S5)',
+    'click_S6': 'Mức truy cập LMS Tuần 17–20 (S6)',
 }
 
 

@@ -22,6 +22,7 @@ data/
 │
 ├── processed/                        # Dữ liệu sạch sau khi chạy ETL Pipeline
 │   ├── clean_data.csv                # Bảng dữ liệu cuối cùng dùng để train model (173.861 dòng, 28 cột, ~22.5 MB)
+│   ├── weekly_clicks.csv             # Click LMS theo tuần 1..20 cho từng lượt đăng ký (29.212 dòng, ~3.2 MB)
 │   └── .gitkeep
 │
 └── README.md                         # Tài liệu mô tả dữ liệu và từ điển đặc trưng
@@ -63,6 +64,11 @@ Quy trình ETL được thiết kế tự động qua 5 bước chính:
      * Số lần thi rớt trước đó (`prior_fail_count`).
      * Độ tiến bộ điểm số (`score_progress = score - prior_avg_score`).
 5. **Nạp & Lưu trữ (Load):** Xuất bảng dữ liệu hoàn chỉnh ra file `data/processed/clean_data.csv`.
+6. **Gộp click LMS theo tuần (`build_weekly_clicks`):** Gộp `studentVle.csv` (~10,6 triệu dòng) theo lượt đăng ký `(code_module, code_presentation, id_student)` và tuần học, xuất `data/processed/weekly_clicks.csv` gồm:
+   * `clicks_w1` … `clicks_w20`: tổng số click LMS trong từng tuần.
+   * `days_w1` … `days_w20`: số ngày có truy cập LMS trong từng tuần (0 – 7).
+   * Click trước ngày bắt đầu khóa học (`date < 0`) được tính vào tuần 1; click sau tuần 20 bị bỏ. Lượt đăng ký không có dòng nào trong bảng được hiểu là 0 click.
+   * Nhờ bảng nhỏ này (~3.2 MB), hệ thống suy luận và Docker không cần file `studentVle.csv` (432 MB).
 
 ---
 
@@ -118,7 +124,7 @@ python src/data/download_oulad.py
 python src/data/etl_pipeline.py
 ```
 
-*Thời gian thực thi dự kiến: khoảng **1 – 2 giây** nhờ cơ chế xử lý vector hóa tối ưu.*
+*Thời gian thực thi dự kiến: khoảng **1 – 2 giây** cho `clean_data.csv` và khoảng **10 giây** cho `weekly_clicks.csv` (đọc 432 MB nhật ký click).*
 
 ---
 

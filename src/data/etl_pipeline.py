@@ -162,5 +162,41 @@ def run_etl(raw_dir=None, output_dir=None):
     return df_clean
 
 
+def build_weekly_clicks(raw_dir=None, output_dir=None, max_week=20):
+    """
+    Gộp nhật ký click LMS (studentVle.csv, ~10,6 triệu dòng) thành bảng tuần cho từng lượt đăng ký:
+    clicks_w1..clicks_w{max_week} (tổng click) và days_w1..days_w{max_week} (số ngày có truy cập).
+    Click trước ngày bắt đầu khóa học (date < 0) được tính vào ngày 0 của tuần 1; tuần > max_week bị bỏ.
+    """
+    raw_dir = raw_dir or DEFAULT_RAW_DIR
+    output_dir = output_dir or DEFAULT_OUTPUT_DIR
+    keys = ['code_module', 'code_presentation', 'id_student']
+    t_start = time.time()
+
+    vle = pd.read_csv(
+        os.path.join(raw_dir, 'studentVle.csv'),
+        usecols=keys + ['date', 'sum_click'],
+        dtype={'code_module': 'category', 'code_presentation': 'category',
+               'id_student': np.int32, 'date': np.int16, 'sum_click': np.int32},
+    )
+    vle['day'] = vle['date'].clip(lower=0)
+    vle['week'] = (vle['day'] // 7 + 1).astype(np.int16)
+    vle = vle[vle['week'] <= max_week]
+
+    daily = vle.groupby(keys + ['week', 'day'], observed=True)['sum_click'].sum().reset_index()
+    weekly = daily.groupby(keys + ['week'], observed=True).agg(clicks=('sum_click', 'sum'), days=('day', 'size'))
+    wide = weekly.unstack('week', fill_value=0).reindex(
+        columns=pd.MultiIndex.from_product([['clicks', 'days'], range(1, max_week + 1)]), fill_value=0
+    )
+    wide.columns = [f'{name}_w{w}' for name, w in wide.columns]
+    wide = wide.reset_index()
+
+    csv_path = os.path.join(output_dir, 'weekly_clicks.csv')
+    wide.to_csv(csv_path, index=False)
+    print(f"✅ Đã lưu click LMS theo tuần: {csv_path} ({len(wide):,} lượt đăng ký, {time.time() - t_start:.1f}s)")
+    return wide
+
+
 if __name__ == '__main__':
     run_etl()
+    build_weekly_clicks()

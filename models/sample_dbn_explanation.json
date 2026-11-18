@@ -1,36 +1,36 @@
 {
   "week_t": 8,
-  "prob_at_risk": 0.7359,
+  "prob_at_risk": 0.7463,
   "risk_level": "High",
   "top_factors": [
     {
       "factor": "perf_S3",
-      "value": "F_lt40",
-      "delta_prob": 0.0555
-    },
-    {
-      "factor": "imd_group",
-      "value": "Low_0_30",
-      "delta_prob": 0.0256
-    },
-    {
-      "factor": "highest_education",
-      "value": "A Level or Equivalent",
-      "delta_prob": 0.0132
+      "value": "Missed_0",
+      "delta_prob": 0.1818
     },
     {
       "factor": "code_module",
-      "value": "AAA",
-      "delta_prob": 0.0114
+      "value": "BBB",
+      "delta_prob": -0.0578
+    },
+    {
+      "factor": "prev_attempts_bin",
+      "value": "2+",
+      "delta_prob": 0.0391
+    },
+    {
+      "factor": "click_S3",
+      "value": "C1_Low",
+      "delta_prob": -0.0238
     },
     {
       "factor": "age_band",
-      "value": "35-55",
-      "delta_prob": 0.0108
+      "value": "0-35",
+      "delta_prob": 0.0048
     }
   ],
-  "id_student": 1414443,
-  "code_module": "AAA",
-  "code_presentation": "2013J",
+  "id_student": 58089,
+  "code_module": "BBB",
+  "code_presentation": "2013B",
   "actual_final_result": "Fail"
 }

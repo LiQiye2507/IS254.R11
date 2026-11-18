@@ -25,7 +25,8 @@ BASELINE_NUM_COLS = [
     'has_submitted', 'has_active', 'submission_rate',
     'sub_mean_score', 'eff_mean_score', 'weighted_score',
     'late_count', 'fail_count', 'tma_bad_count',
-    'last_score', 'score_trend'
+    'last_score', 'score_trend',
+    'log_cum_clicks', 'cum_active_days', 'log_last_week_clicks'
 ]
 
 

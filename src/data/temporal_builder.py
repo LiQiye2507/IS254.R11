@@ -23,9 +23,12 @@ DEFAULT_CLEAN_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'clean_data
 DEFAULT_ASSESS_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'assessments.csv')
 DEFAULT_REG_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'studentRegistration.csv')
 DEFAULT_INFO_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'studentInfo.csv')
+DEFAULT_CLICKS_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'weekly_clicks.csv')
 
 EVAL_WEEKS = [2, 4, 8, 12, 16, 20]
 MAX_WEEK = 20
+CLICK_COLS = [f'clicks_w{w}' for w in range(1, MAX_WEEK + 1)]
+DAY_COLS = [f'days_w{w}' for w in range(1, MAX_WEEK + 1)]
 
 # 6 lát cắt thời gian khớp chính xác ranh giới với EVAL_WEEKS = [2, 4, 8, 12, 16, 20]
 DBN_SLICES = [
@@ -49,6 +52,7 @@ def load_base_enrollments_and_schedule(
     assess_path: str = DEFAULT_ASSESS_PATH,
     reg_path: str = DEFAULT_REG_PATH,
     info_path: str = DEFAULT_INFO_PATH,
+    clicks_path: str = DEFAULT_CLICKS_PATH,
 ):
     """
     Đọc danh sách lượt đăng ký (studentInfo.csv, trừ SV hủy môn trước ngày bắt đầu), kết quả nộp bài
@@ -96,6 +100,17 @@ def load_base_enrollments_and_schedule(
         enrollments['unreg_week'] = unreg_wk.astype(np.int32)
     else:
         enrollments['unreg_week'] = 999
+
+    # Click LMS theo tuần (tạo bởi etl_pipeline.build_weekly_clicks); lượt không có click nào = 0
+    if os.path.exists(clicks_path):
+        enrollments = enrollments.merge(
+            pd.read_csv(clicks_path), on=['code_module', 'code_presentation', 'id_student'], how='left'
+        )
+    else:
+        print(f"⚠️ Không tìm thấy {clicks_path}: đặc trưng click LMS = 0. Chạy `python src/data/etl_pipeline.py` để tạo.")
+    enrollments[CLICK_COLS + DAY_COLS] = (
+        enrollments.reindex(columns=CLICK_COLS + DAY_COLS).fillna(0.0).astype(np.float32)
+    )
     enrollments['enr_idx'] = np.arange(len(enrollments), dtype=np.int32)
 
     # 2. Đọc lịch bài đánh giá định kỳ (loại Exam cuối kỳ để tránh nhiễu cảnh báo sớm)
@@ -228,6 +243,12 @@ def compute_snapshot_features_at_week(enrollments: pd.DataFrame, grid: pd.DataFr
     out['last_score'] = last_s
     out['score_trend'] = (last_s - first_s).astype(np.float32)
 
+    # Tương tác LMS tính đến hết tuần T
+    clicks = enrollments[CLICK_COLS[:week_t]].to_numpy()
+    out['log_cum_clicks'] = np.log1p(clicks.sum(axis=1)).astype(np.float32)
+    out['cum_active_days'] = enrollments[DAY_COLS[:week_t]].to_numpy().sum(axis=1).astype(np.float32)
+    out['log_last_week_clicks'] = np.log1p(clicks[:, -1]).astype(np.float32)
+
     return out
 
 
@@ -328,6 +349,18 @@ def build_dbn_discretized_dataset(enrollments: pd.DataFrame, grid: pd.DataFrame)
         cum_state[act_mask & (m_cnt == 0) & (w_sc >= 70.0)] = 'Strong_ge70'
         cum_state[act_mask & (m_cnt == 1) & (w_sc >= 70.0)] = 'LowRisk_55_70'
 
+        # Mức truy cập LMS trong cửa sổ: không truy cập / 3 mức phân vị của click trung bình mỗi tuần
+        # (phân vị tính trên toàn bộ lượt đăng ký, không dùng nhãn)
+        mean_clicks = enrollments[CLICK_COLS[w_start - 1:w_end]].to_numpy().mean(axis=1)
+        click_bin = np.full(n_enr, 'C0_None', dtype=object)
+        nz = mean_clicks > 0
+        if nz.any():
+            q1, q2 = np.quantile(mean_clicks[nz], [1 / 3, 2 / 3])
+            click_bin[nz] = np.where(
+                mean_clicks[nz] <= q1, 'C1_Low', np.where(mean_clicks[nz] <= q2, 'C2_Mid', 'C3_High')
+            )
+
+        dbn_df[f'click_{s_name}'] = click_bin
         dbn_df[f'perf_{s_name}'] = perf_bin
         dbn_df[f'disc_{s_name}'] = disc_bin
         dbn_df[f'state_{s_name}'] = cum_state
@@ -348,7 +381,7 @@ def build_weekly_sequence_tensors(enrollments: pd.DataFrame, grid: pd.DataFrame,
           0.0 ở các tuần sau khi sinh viên đã chính thức rút môn (đúng mục 3.2 DSS_plan.docx).
     """
     n_enr = len(enrollments)
-    n_feat = 15
+    n_feat = 18
     seq_x = np.zeros((n_enr, max_week, n_feat), dtype=np.float32)
 
     # Tính trước hoạt động phát sinh đúng tại tuần t
@@ -389,6 +422,9 @@ def build_weekly_sequence_tensors(enrollments: pd.DataFrame, grid: pd.DataFrame,
         seq_x[:, idx, 12] = snap_w['eff_mean_score'].to_numpy() / 100.0      # eff_mean_score [0..1]
         seq_x[:, idx, 13] = snap_w['last_score'].to_numpy() / 100.0          # last_score [0..1]
         seq_x[:, idx, 14] = np.log1p(snap_w['tma_bad_count'].to_numpy())     # cum_tma_late_or_missed (log)
+        seq_x[:, idx, 15] = np.log1p(enrollments[CLICK_COLS[idx]].to_numpy()) # clicks_this_week (log)
+        seq_x[:, idx, 16] = enrollments[DAY_COLS[idx]].to_numpy() / 7.0      # active_days_this_week [0..1]
+        seq_x[:, idx, 17] = snap_w['log_cum_clicks'].to_numpy()              # cum_clicks (log)
 
     # Mask cho hàm loss trong quá trình huấn luyện (mask các tuần sau khi SV đã hủy đăng ký)
     weeks_arr = np.arange(1, max_week + 1, dtype=np.int32)[None, :]

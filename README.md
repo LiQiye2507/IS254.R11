@@ -68,6 +68,7 @@ IS254.R11/
 │   ├── raw/                          # Dữ liệu OULAD gốc (tải tự động qua script)
 │   └── processed/                    # Dữ liệu sạch & kết quả thực nghiệm
 │       ├── clean_data.csv            # 173.861 dòng x 28 cột (~22.5 MB)
+│       ├── weekly_clicks.csv         # Click LMS theo tuần 1..20 của từng lượt đăng ký (~3.2 MB)
 │       ├── benchmark_folds.csv       # Chi tiết kết quả từng fold trên 6 mốc tuần
 │       └── benchmark_summary.csv     # Trung bình ± độ lệch chuẩn 5-Fold
 │
@@ -145,29 +146,30 @@ Số in đậm là giá trị cao nhất trong từng mốc tuần.
 
 | Tuần | Mô hình | Accuracy | Recall (At-risk) | F1-Score | AUC-ROC |
 | :-: | :--- | :-: | :-: | :-: | :-: |
-| T = 2 | DBN (5-Tier) | 0.5631 ± 0.0103 | **0.8515 ± 0.0259** | **0.6543 ± 0.0065** | 0.6271 ± 0.0046 |
-| T = 2 | LSTM (Masked) | 0.6150 ± 0.0056 | 0.7432 ± 0.0398 | 0.6519 ± 0.0116 | 0.6744 ± 0.0030 |
-| T = 2 | Đối chứng (RF) | 0.6282 ± 0.0043 | 0.6167 ± 0.0178 | 0.6169 ± 0.0092 | 0.6786 ± 0.0037 |
-| T = 2 | Đối chứng (LR) | **0.6306 ± 0.0030** | 0.6259 ± 0.0150 | 0.6220 ± 0.0067 | **0.6793 ± 0.0018** |
-| T = 8 | DBN (5-Tier) | 0.7470 ± 0.0108 | **0.7478 ± 0.0161** | 0.7418 ± 0.0082 | 0.8175 ± 0.0064 |
-| T = 8 | LSTM (Masked) | 0.7707 ± 0.0032 | 0.7430 ± 0.0069 | **0.7589 ± 0.0039** | 0.8530 ± 0.0050 |
-| T = 8 | Đối chứng (RF) | **0.7779 ± 0.0053** | 0.6954 ± 0.0067 | 0.7525 ± 0.0050 | **0.8544 ± 0.0072** |
-| T = 8 | Đối chứng (LR) | 0.7713 ± 0.0063 | 0.7006 ± 0.0079 | 0.7484 ± 0.0070 | 0.8492 ± 0.0054 |
-| T = 16 | DBN (5-Tier) | 0.8313 ± 0.0033 | **0.8019 ± 0.0145** | 0.8220 ± 0.0025 | 0.8969 ± 0.0030 |
-| T = 16 | LSTM (Masked) | 0.8392 ± 0.0040 | 0.7799 ± 0.0302 | 0.8247 ± 0.0076 | **0.9151 ± 0.0043** |
-| T = 16 | Đối chứng (RF) | **0.8434 ± 0.0032** | 0.7809 ± 0.0059 | **0.8289 ± 0.0034** | 0.9148 ± 0.0040 |
-| T = 16 | Đối chứng (LR) | 0.8352 ± 0.0017 | 0.7854 ± 0.0055 | 0.8224 ± 0.0023 | 0.9074 ± 0.0044 |
-| T = 20 | DBN (5-Tier) | 0.8563 ± 0.0020 | **0.8432 ± 0.0216** | 0.8507 ± 0.0034 | 0.9231 ± 0.0029 |
-| T = 20 | LSTM (Masked) | 0.8695 ± 0.0055 | 0.8310 ± 0.0092 | 0.8609 ± 0.0042 | 0.9386 ± 0.0034 |
-| T = 20 | Đối chứng (RF) | **0.8731 ± 0.0048** | 0.8230 ± 0.0086 | **0.8630 ± 0.0053** | **0.9398 ± 0.0031** |
-| T = 20 | Đối chứng (LR) | 0.8661 ± 0.0032 | 0.8276 ± 0.0073 | 0.8572 ± 0.0038 | 0.9345 ± 0.0027 |
+| T = 2 | DBN (5-Tier) | 0.6169 ± 0.0170 | **0.8440 ± 0.0239** | 0.6817 ± 0.0042 | 0.7144 ± 0.0068 |
+| T = 2 | LSTM (Masked) | 0.6807 ± 0.0069 | 0.7384 ± 0.0199 | **0.6919 ± 0.0035** | 0.7560 ± 0.0086 |
+| T = 2 | Đối chứng (RF) | 0.6908 ± 0.0076 | 0.6485 ± 0.0114 | 0.6707 ± 0.0092 | 0.7538 ± 0.0117 |
+| T = 2 | Đối chứng (LR) | **0.6921 ± 0.0064** | 0.6703 ± 0.0073 | 0.6790 ± 0.0064 | **0.7583 ± 0.0087** |
+| T = 8 | DBN (5-Tier) | 0.7424 ± 0.0132 | 0.7500 ± 0.0300 | 0.7388 ± 0.0031 | 0.8251 ± 0.0044 |
+| T = 8 | LSTM (Masked) | 0.7844 ± 0.0080 | **0.7628 ± 0.0201** | **0.7746 ± 0.0085** | **0.8682 ± 0.0048** |
+| T = 8 | Đối chứng (RF) | **0.7870 ± 0.0043** | 0.7105 ± 0.0100 | 0.7641 ± 0.0049 | 0.8658 ± 0.0068 |
+| T = 8 | Đối chứng (LR) | 0.7819 ± 0.0065 | 0.7292 ± 0.0096 | 0.7646 ± 0.0071 | 0.8633 ± 0.0055 |
+| T = 16 | DBN (5-Tier) | 0.8334 ± 0.0053 | **0.8028 ± 0.0128** | 0.8240 ± 0.0045 | 0.9077 ± 0.0036 |
+| T = 16 | LSTM (Masked) | 0.8489 ± 0.0049 | 0.7962 ± 0.0097 | **0.8366 ± 0.0058** | **0.9247 ± 0.0034** |
+| T = 16 | Đối chứng (RF) | **0.8498 ± 0.0026** | 0.7856 ± 0.0069 | 0.8356 ± 0.0031 | 0.9221 ± 0.0041 |
+| T = 16 | Đối chứng (LR) | 0.8413 ± 0.0034 | 0.7983 ± 0.0056 | 0.8301 ± 0.0037 | 0.9169 ± 0.0047 |
+| T = 20 | DBN (5-Tier) | 0.8671 ± 0.0036 | 0.8337 ± 0.0105 | 0.8590 ± 0.0043 | 0.9314 ± 0.0027 |
+| T = 20 | LSTM (Masked) | 0.8776 ± 0.0042 | 0.8264 ± 0.0084 | 0.8677 ± 0.0036 | **0.9452 ± 0.0026** |
+| T = 20 | Đối chứng (RF) | **0.8796 ± 0.0036** | 0.8259 ± 0.0065 | **0.8695 ± 0.0041** | 0.9445 ± 0.0030 |
+| T = 20 | Đối chứng (LR) | 0.8726 ± 0.0028 | **0.8365 ± 0.0028** | 0.8644 ± 0.0028 | 0.9401 ± 0.0025 |
 
 *Lưu ý:* DBN và LSTM chọn ngưỡng phân loại trên tập validation, còn mô hình đối chứng dùng ngưỡng cố định 0.5. Vì vậy Accuracy, Recall và F1 giữa hai nhóm phụ thuộc cả vào ngưỡng; AUC-ROC (không phụ thuộc ngưỡng) mới là thước đo so sánh công bằng.
 
 **Kết luận về các giả thuyết:**
-- **H1** được ủng hộ một phần: ở T = 2, DBN có F1 tương đương LSTM và dao động F1/Recall giữa các fold nhỏ hơn, nhưng AUC-ROC thấp hơn ở cả 5 fold.
-- **H2** được ủng hộ: từ T ≥ 4, LSTM có AUC-ROC cao hơn DBN ở mọi fold. Tuy vậy, AUC-ROC của LSTM chỉ ngang mô hình đối chứng Random Forest.
-- **H3** được ủng hộ: DBN cung cấp giải thích ΔP cho từng yếu tố.
+- **H1** không được ủng hộ: ở T = 2, DBN có AUC-ROC và F1 thấp hơn LSTM ở cả 5 fold, và không ổn định hơn LSTM giữa các fold.
+- **H2** được ủng hộ: từ T ≥ 4, LSTM có AUC-ROC và F1 cao hơn DBN ở mọi fold. Tuy vậy, AUC-ROC của LSTM chỉ nhỉnh hơn mô hình đối chứng Random Forest rất ít (dưới 0.003).
+- Bổ sung đặc trưng click LMS cải thiện AUC-ROC của cả 4 mô hình ở mọi mốc tuần, rõ nhất ở T = 2 (+0.075 đến +0.087).
+- **H3** được ủng hộ: DBN cung cấp giải thích ΔP cho từng yếu tố, kể cả mức truy cập LMS.
 
 *Bảng đầy đủ 6 mốc tuần và so sánh cặp theo fold: [docs/experimental_results.md](docs/experimental_results.md). Phân tích chi tiết và nguyên nhân: [docs/hypothesis_analysis.md](docs/hypothesis_analysis.md).*
 

@@ -82,7 +82,7 @@ def run_benchmark(n_splits: int = 5, max_folds_to_run: int | None = None, save_a
 
     print(f"  + Số lượt đăng ký học phần : {len(enrollments):,} lượt ({enrollments['id_student'].nunique():,} SV duy nhất)")
     print(f"  + Tỷ lệ nhãn At-risk       : {enrollments['at_risk'].mean()*100:.2f}%")
-    print(f"  + Kích thước Tensor LSTM   : {seq_x.shape} (N x 20 tuần x 12 đặc trưng)")
+    print(f"  + Kích thước Tensor LSTM   : {seq_x.shape} (N x 20 tuần x {seq_x.shape[2]} đặc trưng)")
     print(f"  + Kích thước bảng DBN      : {dbn_full_df.shape} (5 tầng x 6 lát cắt S1..S6)")
     print(f"  + Thời gian tạo đặc trưng  : {time.time() - t0:.2f}s")
 

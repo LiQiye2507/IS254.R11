@@ -6,7 +6,8 @@ Thiết kế bám sát Mục 3.1, Giả thuyết H1 & H3 trong Đề cương (DS
     + Tầng 1 (Demographic): gender, age_band, disability, region
     + Tầng 2 (Academic Background): highest_education, imd_group, prev_attempts_bin, credits_bin
     + Tầng 3 (Course & Readiness Context): code_module, bg_readiness
-    + Tầng 4 (Dynamic Temporal Slices S1..S6): perf_St, disc_St, state_St (chuỗi Markov bậc 1)
+    + Tầng 4 (Dynamic Temporal Slices S1..S6): perf_St, disc_St, click_St (mức truy cập LMS), state_St
+      (hai chuỗi Markov bậc 1: state_S1 -> ... -> state_S6 và click_S1 -> ... -> click_S6)
     + Tầng 5 (Target): at_risk in {'0', '1'}
 - Học cấu trúc từ dữ liệu bằng Greedy Hill-Climbing với điểm BIC ('bic-d') và ràng buộc thứ tự tầng
   thông qua ExpertKnowledge (chỉ cho phép cạnh từ tầng thấp lên tầng cao và theo chiều thời gian).
@@ -110,7 +111,7 @@ class FiveTierDBNClassifier:
             TIER3_NODES,
         ]
         for s_name, _ in SLICE_MAX_WEEK:
-            temporal_order.append([f'perf_{s_name}', f'disc_{s_name}'])
+            temporal_order.append([f'perf_{s_name}', f'disc_{s_name}', f'click_{s_name}'])
             temporal_order.append([f'state_{s_name}'])
         temporal_order.append(['at_risk'])
 
@@ -122,6 +123,9 @@ class FiveTierDBNClassifier:
             ('bg_readiness', 'at_risk'),
             ('code_module', 'at_risk'),
             ('state_S6', 'at_risk'),
+            # Chuỗi Markov mức truy cập LMS: click_S1 -> ... -> click_S6 -> at_risk, để click đã quan sát
+            # ở tuần T lan truyền tới at_risk qua các lát tương lai chưa quan sát (không bị chặn bởi bằng chứng)
+            ('click_S6', 'at_risk'),
         ]
         for idx in range(len(SLICE_MAX_WEEK)):
             s_cur = SLICE_MAX_WEEK[idx][0]
@@ -130,6 +134,7 @@ class FiveTierDBNClassifier:
             if idx > 0:
                 s_prev = SLICE_MAX_WEEK[idx - 1][0]
                 required_edges.append((f'state_{s_prev}', f'state_{s_cur}'))
+                required_edges.append((f'click_{s_prev}', f'click_{s_cur}'))
 
         ek = ExpertKnowledge(
             temporal_order=temporal_order,
@@ -187,7 +192,7 @@ class FiveTierDBNClassifier:
         obs = TIER1_NODES + TIER2_NODES + TIER3_NODES
         for s_name, w_max in SLICE_MAX_WEEK:
             if w_max <= week_t:
-                obs.extend([f'perf_{s_name}', f'disc_{s_name}', f'state_{s_name}'])
+                obs.extend([f'perf_{s_name}', f'disc_{s_name}', f'click_{s_name}', f'state_{s_name}'])
 
         obs_set = set(obs)
         anc_and_target = nx.ancestors(self.bn, 'at_risk') | {'at_risk'}

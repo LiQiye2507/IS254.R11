@@ -3,7 +3,7 @@ Module xử lý dữ liệu, ETL Pipeline và Temporal Sequence Builder
 """
 
 from .download_oulad import download_and_extract
-from .etl_pipeline import run_etl
+from .etl_pipeline import run_etl, build_weekly_clicks
 from .temporal_builder import (
     EVAL_WEEKS,
     load_base_enrollments_and_schedule,
@@ -15,6 +15,7 @@ from .temporal_builder import (
 __all__ = [
     "download_and_extract",
     "run_etl",
+    "build_weekly_clicks",
     "EVAL_WEEKS",
     "load_base_enrollments_and_schedule",
     "compute_snapshot_features_at_week",
