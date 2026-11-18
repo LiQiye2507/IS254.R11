@@ -3,7 +3,7 @@ Temporal Snapshot & Sequence Builder cho Hệ DSS Cảnh báo sớm Nguy cơ H�
 -----------------------------------------------------------------------------------------
 Thiết kế theo phương án thống nhất (Cách 2 nâng cấp - Khớp 100% Đề cương DSS_plan.docx):
 - Quy chiếu toàn bộ 7 môn học về trục Tuần lịch học: T in {1..20}, đánh giá tại T in {2, 4, 8, 12, 16, 20}.
-- Giữ nguyên 25,814 lượt đăng ký sinh viên trong `clean_data.csv`.
+- Dùng toàn bộ lượt đăng ký trong `studentInfo.csv` (trừ SV hủy môn trước ngày bắt đầu), kể cả SV chưa nộp bài nào.
 - Kết hợp lịch hạn nộp từ `data/raw/assessments.csv` để bắt chính xác "dữ liệu ngầm":
     + Bài đã nộp tính đến tuần T (`submission_week <= T`) -> is_submitted = 1.
     + Bài đã qua hạn tại tuần T (`deadline_week <= T`) nhưng SV chưa nộp -> is_missed = 1 (cảnh báo bỏ bài).
@@ -22,6 +22,7 @@ PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..
 DEFAULT_CLEAN_PATH = os.path.join(PROJECT_ROOT, 'data', 'processed', 'clean_data.csv')
 DEFAULT_ASSESS_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'assessments.csv')
 DEFAULT_REG_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'studentRegistration.csv')
+DEFAULT_INFO_PATH = os.path.join(PROJECT_ROOT, 'data', 'raw', 'studentInfo.csv')
 
 EVAL_WEEKS = [2, 4, 8, 12, 16, 20]
 MAX_WEEK = 20
@@ -47,26 +48,35 @@ def load_base_enrollments_and_schedule(
     clean_path: str = DEFAULT_CLEAN_PATH,
     assess_path: str = DEFAULT_ASSESS_PATH,
     reg_path: str = DEFAULT_REG_PATH,
+    info_path: str = DEFAULT_INFO_PATH,
 ):
     """
-    Đọc clean_data.csv (25,814 lượt đăng ký) và lịch bài kiểm tra định kỳ (TMA, CMA) từ assessments.csv.
+    Đọc danh sách lượt đăng ký (studentInfo.csv, trừ SV hủy môn trước ngày bắt đầu), kết quả nộp bài
+    từ clean_data.csv và lịch bài kiểm tra định kỳ (TMA, CMA) từ assessments.csv.
     """
     df_clean = pd.read_csv(clean_path)
 
-    # 1. Trích xuất danh sách 25,814 lượt đăng ký duy nhất
+    # 1. Danh sách lượt đăng ký
     enr_cols = (
         ['code_module', 'code_presentation', 'id_student']
         + STATIC_CAT_COLS[:-1]  # code_module đã có ở đầu
         + STATIC_NUM_COLS
         + ['final_result', 'at_risk']
     )
+    if os.path.exists(info_path):
+        # Lấy từ studentInfo để giữ cả SV chưa nộp bài nào (gần như toàn bộ là Withdrawn/Fail)
+        base = pd.read_csv(info_path)
+        base['imd_band'] = base['imd_band'].fillna('Unknown')
+        base['at_risk'] = base['final_result'].isin(['Fail', 'Withdrawn']).astype(int)
+    else:
+        print(f"⚠️ Không tìm thấy {info_path}: chỉ dùng các lượt đăng ký có ít nhất một bài nộp trong clean_data.csv.")
+        base = df_clean
     enrollments = (
-        df_clean[enr_cols]
+        base[enr_cols]
         .drop_duplicates(subset=['code_module', 'code_presentation', 'id_student'])
         .sort_values(['code_module', 'code_presentation', 'id_student'])
         .reset_index(drop=True)
     )
-    enrollments['enr_idx'] = np.arange(len(enrollments), dtype=np.int32)
 
     # Ghép thêm tuần hủy môn (unreg_week) từ studentRegistration.csv nếu có (phục vụ mask cho LSTM)
     if os.path.exists(reg_path):
@@ -76,6 +86,8 @@ def load_base_enrollments_and_schedule(
         enrollments = enrollments.merge(
             df_reg, on=['code_module', 'code_presentation', 'id_student'], how='left'
         )
+        # Bỏ SV hủy môn trước ngày bắt đầu khóa học (không có dữ liệu để dự đoán), giống etl_pipeline.py
+        enrollments = enrollments[~(enrollments['date_unregistration'] < 0)].reset_index(drop=True)
         unreg_wk = np.where(
             enrollments['date_unregistration'].notna(),
             np.clip(enrollments['date_unregistration'].fillna(999) // 7, 0, None) + 1,
@@ -84,6 +96,7 @@ def load_base_enrollments_and_schedule(
         enrollments['unreg_week'] = unreg_wk.astype(np.int32)
     else:
         enrollments['unreg_week'] = 999
+    enrollments['enr_idx'] = np.arange(len(enrollments), dtype=np.int32)
 
     # 2. Đọc lịch bài đánh giá định kỳ (loại Exam cuối kỳ để tránh nhiễu cảnh báo sớm)
     if os.path.exists(assess_path):
@@ -133,7 +146,7 @@ def load_base_enrollments_and_schedule(
 
 def compute_snapshot_features_at_week(enrollments: pd.DataFrame, grid: pd.DataFrame, week_t: int) -> pd.DataFrame:
     """
-    Tính bảng đặc trưng tích lũy (Zero Data Leakage) cho 25,814 lượt đăng ký tính đến hết tuần `week_t`.
+    Tính bảng đặc trưng tích lũy (Zero Data Leakage) cho toàn bộ lượt đăng ký tính đến hết tuần `week_t`.
     """
     n_enr = len(enrollments)
 

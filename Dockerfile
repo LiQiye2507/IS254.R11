@@ -11,7 +11,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 
 COPY src /app/src
 COPY data/processed /app/data/processed
-COPY data/raw/assessments.csv data/raw/studentRegistration.csv /app/data/raw/
+COPY data/raw/assessments.csv data/raw/studentRegistration.csv data/raw/studentInfo.csv /app/data/raw/
 COPY models /app/models
 COPY docs /app/docs
 

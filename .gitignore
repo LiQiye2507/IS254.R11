@@ -55,9 +55,10 @@ venv.bak/
 # (BẮT BUỘC bỏ qua vì studentVle.csv nặng 432 MB, vượt giới hạn 100 MB của GitHub)
 data/raw/*
 !data/raw/.gitkeep
-# Lịch bài kiểm tra & ngày hủy môn (nhỏ) cần cho suy luận, giữ lại trong repo
+# Lịch bài kiểm tra, ngày hủy môn & danh sách đăng ký (nhỏ) cần cho suy luận, giữ lại trong repo
 !data/raw/assessments.csv
 !data/raw/studentRegistration.csv
+!data/raw/studentInfo.csv
 
 # Dữ liệu sạch sau ETL (clean_data.csv ~22.5 MB, nằm trong ngưỡng cho phép < 100 MB của GitHub).
 # Nếu muốn đẩy repo siêu nhẹ không kèm dữ liệu, bạn có thể bỏ chú thích dòng bên dưới:

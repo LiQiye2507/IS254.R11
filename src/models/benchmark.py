@@ -235,7 +235,7 @@ def run_benchmark(n_splits: int = 5, max_folds_to_run: int | None = None, save_a
         sum_csv = os.path.join(PROJECT_ROOT, 'data', 'processed', 'benchmark_summary.csv')
         df_folds.to_csv(folds_csv, index=False)
         df_summary.to_csv(sum_csv, index=False)
-        _write_markdown_report(df_summary, df_folds, saved_sample_explanation, n_folds_actual=df_folds['fold'].nunique())
+        _write_markdown_report(df_summary, df_folds, saved_sample_explanation, n_folds_actual=df_folds['fold'].nunique(), enrollments=enrollments)
 
     print("\n" + "=" * 78)
     print("📊 BẢNG TỔNG HỢP KẾT QUẢ THỰC NGHIỆM (TRUNG BÌNH ± ĐỘ LỆCH CHUẨN)")
@@ -256,12 +256,12 @@ def run_benchmark(n_splits: int = 5, max_folds_to_run: int | None = None, save_a
     return df_folds, df_summary
 
 
-def _write_markdown_report(df_summary: pd.DataFrame, df_folds: pd.DataFrame, sample_exp: dict | None, n_folds_actual: int):
+def _write_markdown_report(df_summary: pd.DataFrame, df_folds: pd.DataFrame, sample_exp: dict | None, n_folds_actual: int, enrollments: pd.DataFrame):
     report_path = os.path.join(PROJECT_ROOT, 'docs', 'experimental_results.md')
     lines = [
         "# Kết Quả Thực Nghiệm & Đối Chiếu Giả Thuyết (IS254.R11)",
         "",
-        f"> **Thiết lập đánh giá:** Kiểm định chéo `{n_folds_actual}-Fold StratifiedGroupKFold` chia theo `id_student` trên **25.814 lượt đăng ký** (`23.345` sinh viên duy nhất, tỷ lệ `At-risk = 40.41%`). Không có bất kỳ sinh viên nào xuất hiện đồng thời ở tập Train và Test.",
+        f"> **Thiết lập đánh giá:** Kiểm định chéo `{n_folds_actual}-Fold StratifiedGroupKFold` chia theo `id_student` trên **{len(enrollments):,} lượt đăng ký** (`{enrollments['id_student'].nunique():,}` sinh viên duy nhất; tỷ lệ `At-risk = {enrollments['at_risk'].mean() * 100:.2f}%`). Không có bất kỳ sinh viên nào xuất hiện đồng thời ở tập Train và Test.".replace(',', '.'),
         "",
         "---",
         "",
