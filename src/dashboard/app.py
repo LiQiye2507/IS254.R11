@@ -141,6 +141,11 @@ with st.sidebar:
         st.success(f"🟢 Kết nối FastAPI (`{API_BASE_URL}`)")
     else:
         st.info("🔵 Chế độ Direct Engine (Tự động nạp nội bộ)")
+    st.caption(
+        "ℹ️ Bản demo dùng mô hình học trên fold 1 nhưng chấm điểm toàn bộ sinh viên OULAD, "
+        "nên xác suất của sinh viên thuộc tập huấn luyện có thể lạc quan hơn thực tế. "
+        "Hiệu năng khách quan: xem tab 4 (kiểm định chéo 5-fold)."
+    )
 
     st.divider()
     st.markdown("### 1. Bộ lọc Học phần & Thời điểm")

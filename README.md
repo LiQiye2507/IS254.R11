@@ -101,7 +101,7 @@ IS254.R11/
 │
 └── notebooks/                        # Jupyter Notebooks trực quan hóa
     ├── 01_exploratory_data_analysis.ipynb
-    ├── 05_model_evaluation.ipynb
+    ├── 02_model_evaluation.ipynb
     └── README.md
 ```
 
