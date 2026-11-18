@@ -90,6 +90,7 @@ def load_base_enrollments_and_schedule(
         df_ass = pd.read_csv(assess_path)
     else:
         # Dự phòng trích xuất từ clean_data nếu máy người dùng chưa tải raw
+        print(f"⚠️ Không tìm thấy {assess_path}: hạn nộp được ước lượng, kết quả có thể lệch so với lúc huấn luyện.")
         df_ass = (
             df_clean[['code_module', 'code_presentation', 'id_assessment', 'assessment_type', 'weight']]
             .drop_duplicates()

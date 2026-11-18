@@ -53,6 +53,11 @@ FACTOR_LABELS = {
 }
 
 
+def dbn_effective_week(week_t: int) -> int:
+    # Lát cắt DBN gần nhất đã kết thúc <= T; T=1 chỉ dùng bằng chứng nền (S1 kết thúc ở tuần 2)
+    return max([1] + [w for w in (2, 4, 8, 12, 16, 20) if w <= week_t])
+
+
 def classify_risk_tier(prob: float, low_th: float = 0.30, high_th: float = 0.60) -> str:
     if prob < low_th:
         return "Low"
@@ -141,8 +146,7 @@ class DSSInferenceEngine:
         return self._snap_week_cache[week_t]
 
     def _get_dbn_probs_for_week(self, week_t: int) -> np.ndarray:
-        # Quy chiếu tuần T sang lát cắt DBN gần nhất <= T (2, 4, 8, 12, 16, 20)
-        eff_w = max([w for w in [2, 4, 8, 12, 16, 20] if w <= max(week_t, 2)])
+        eff_w = dbn_effective_week(week_t)
         if eff_w not in self._dbn_week_cache:
             self._dbn_week_cache[eff_w] = self.dbn_clf.predict_proba_at_week(self.dbn_df, eff_w)
         return self._dbn_week_cache[eff_w]
@@ -260,7 +264,7 @@ class DSSInferenceEngine:
         high_th: float = 0.60,
     ) -> dict:
         idx = self.get_enr_index(id_student, code_module, code_presentation)
-        eff_w = max([w for w in [2, 4, 8, 12, 16, 20] if w <= max(week_t, 2)])
+        eff_w = dbn_effective_week(week_t)
         exp = self.dbn_clf.explain_student(self.dbn_df.iloc[idx], week_t=eff_w, top_k=6)
         prob = float(exp['prob_at_risk'])
         factors = [
