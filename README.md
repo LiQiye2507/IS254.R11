@@ -59,7 +59,8 @@ IS254.R11/
 ├── docs/                             # Tài liệu đề cương & báo cáo thực nghiệm
 │   ├── DSS_plan.docx                 # Bản kế hoạch đồ án gốc (Word)
 │   ├── DSS_plan.txt                  # Nội dung kế hoạch dạng văn bản
-│   ├── experimental_results.md       # Bảng 4 chính thức (5-Fold CV) & đối chiếu H1, H2, H3
+│   ├── experimental_results.md       # Bảng 4 chính thức (5-Fold CV) & so sánh cặp theo fold
+│   ├── hypothesis_analysis.md        # Phân tích kiểm chứng giả thuyết H1, H2, H3
 │   └── README.md                     # Tóm tắt tài liệu dự án
 │
 ├── data/                             # Quản lý dữ liệu dự án
@@ -140,17 +141,33 @@ docker compose up --build
 
 ## 📊 Tóm tắt Kết quả Thực nghiệm 5-Fold (`StratifiedGroupKFold` theo `id_student`)
 
+Số in đậm là giá trị cao nhất trong từng mốc tuần.
+
 | Tuần | Mô hình | Accuracy | Recall (At-risk) | F1-Score | AUC-ROC |
 | :-: | :--- | :-: | :-: | :-: | :-: |
-| **T = 2** | **DBN (5-Tier)** | 0.5776 ± 0.0039 | **0.6754 ± 0.0262** | **0.5636 ± 0.0091** | 0.6282 ± 0.0043 |
-| **T = 2** | **LSTM (Masked)** | 0.6211 ± 0.0060 | 0.5616 ± 0.0602 | 0.5439 ± 0.0243 | 0.6601 ± 0.0064 |
-| **T = 8** | **DBN (5-Tier)** | 0.7282 ± 0.0103 | 0.6126 ± 0.0130 | 0.6456 ± 0.0127 | 0.7617 ± 0.0061 |
-| **T = 8** | **LSTM (Masked)** | **0.7469 ± 0.0056** | 0.6400 ± 0.0402 | **0.6710 ± 0.0122** | **0.8044 ± 0.0033** |
-| **T = 16** | **DBN (5-Tier)** | 0.8034 ± 0.0052 | 0.7336 ± 0.0189 | 0.7510 ± 0.0080 | 0.8605 ± 0.0075 |
-| **T = 16** | **LSTM (Masked)** | **0.8136 ± 0.0045** | 0.7254 ± 0.0299 | **0.7586 ± 0.0061** | **0.8822 ± 0.0055** |
-| **T = 20** | **LSTM (Masked)** | **0.8456 ± 0.0077** | **0.7857 ± 0.0169** | **0.8045 ± 0.0072** | **0.9144 ± 0.0053** |
+| T = 2 | DBN (5-Tier) | 0.5776 ± 0.0039 | **0.6754 ± 0.0262** | 0.5636 ± 0.0091 | 0.6282 ± 0.0043 |
+| T = 2 | LSTM (Masked) | 0.6211 ± 0.0060 | 0.5616 ± 0.0602 | 0.5439 ± 0.0243 | 0.6601 ± 0.0064 |
+| T = 2 | Đối chứng (RF) | 0.6214 ± 0.0040 | 0.6020 ± 0.0175 | 0.5623 ± 0.0087 | 0.6667 ± 0.0041 |
+| T = 2 | Đối chứng (LR) | **0.6235 ± 0.0042** | 0.6117 ± 0.0061 | **0.5677 ± 0.0036** | **0.6678 ± 0.0041** |
+| T = 8 | DBN (5-Tier) | 0.7282 ± 0.0103 | 0.6126 ± 0.0130 | 0.6456 ± 0.0127 | 0.7617 ± 0.0061 |
+| T = 8 | LSTM (Masked) | **0.7469 ± 0.0056** | 0.6400 ± 0.0402 | 0.6710 ± 0.0122 | 0.8044 ± 0.0033 |
+| T = 8 | Đối chứng (RF) | 0.7452 ± 0.0030 | 0.6543 ± 0.0148 | 0.6748 ± 0.0075 | **0.8066 ± 0.0053** |
+| T = 8 | Đối chứng (LR) | 0.7408 ± 0.0065 | **0.6698 ± 0.0135** | **0.6762 ± 0.0080** | 0.7996 ± 0.0033 |
+| T = 16 | DBN (5-Tier) | 0.8034 ± 0.0052 | 0.7336 ± 0.0189 | 0.7510 ± 0.0080 | 0.8605 ± 0.0075 |
+| T = 16 | LSTM (Masked) | 0.8136 ± 0.0045 | 0.7254 ± 0.0299 | 0.7586 ± 0.0061 | 0.8822 ± 0.0055 |
+| T = 16 | Đối chứng (RF) | **0.8161 ± 0.0062** | 0.7418 ± 0.0155 | **0.7653 ± 0.0093** | **0.8825 ± 0.0089** |
+| T = 16 | Đối chứng (LR) | 0.8057 ± 0.0057 | **0.7508 ± 0.0156** | 0.7574 ± 0.0085 | 0.8725 ± 0.0078 |
+| T = 20 | DBN (5-Tier) | 0.8366 ± 0.0057 | 0.7834 ± 0.0241 | 0.7948 ± 0.0098 | 0.8957 ± 0.0051 |
+| T = 20 | LSTM (Masked) | 0.8456 ± 0.0077 | 0.7857 ± 0.0169 | 0.8045 ± 0.0072 | 0.9144 ± 0.0053 |
+| T = 20 | Đối chứng (RF) | **0.8498 ± 0.0065** | 0.7938 ± 0.0181 | **0.8102 ± 0.0096** | **0.9162 ± 0.0072** |
+| T = 20 | Đối chứng (LR) | 0.8406 ± 0.0067 | **0.7939 ± 0.0166** | 0.8009 ± 0.0098 | 0.9098 ± 0.0070 |
 
-*Chi tiết toàn bộ bảng so sánh đối chứng và phân tích kiểm chứng giả thuyết H1, H2, H3 xem tại [docs/experimental_results.md](docs/experimental_results.md).*
+**Kết luận về các giả thuyết:**
+- **H1** được ủng hộ một phần: ở T = 2, DBN ổn định hơn giữa các fold và có F1 tương đương LSTM, nhưng AUC-ROC thấp hơn.
+- **H2** được ủng hộ: từ T ≥ 4, LSTM vượt DBN ở mọi fold. Tuy vậy, LSTM không vượt mô hình đối chứng Random Forest.
+- **H3** được ủng hộ: DBN cung cấp giải thích ΔP cho từng yếu tố.
+
+*Bảng đầy đủ 6 mốc tuần và so sánh cặp theo fold: [docs/experimental_results.md](docs/experimental_results.md). Phân tích chi tiết và nguyên nhân: [docs/hypothesis_analysis.md](docs/hypothesis_analysis.md).*
 
 ---
 

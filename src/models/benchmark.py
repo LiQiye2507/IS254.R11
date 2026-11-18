@@ -235,7 +235,7 @@ def run_benchmark(n_splits: int = 5, max_folds_to_run: int | None = None, save_a
         sum_csv = os.path.join(PROJECT_ROOT, 'data', 'processed', 'benchmark_summary.csv')
         df_folds.to_csv(folds_csv, index=False)
         df_summary.to_csv(sum_csv, index=False)
-        _write_markdown_report(df_summary, saved_sample_explanation, n_folds_actual=df_folds['fold'].nunique())
+        _write_markdown_report(df_summary, df_folds, saved_sample_explanation, n_folds_actual=df_folds['fold'].nunique())
 
     print("\n" + "=" * 78)
     print("📊 BẢNG TỔNG HỢP KẾT QUẢ THỰC NGHIỆM (TRUNG BÌNH ± ĐỘ LỆCH CHUẨN)")
@@ -256,7 +256,7 @@ def run_benchmark(n_splits: int = 5, max_folds_to_run: int | None = None, save_a
     return df_folds, df_summary
 
 
-def _write_markdown_report(df_summary: pd.DataFrame, sample_exp: dict | None, n_folds_actual: int):
+def _write_markdown_report(df_summary: pd.DataFrame, df_folds: pd.DataFrame, sample_exp: dict | None, n_folds_actual: int):
     report_path = os.path.join(PROJECT_ROOT, 'docs', 'experimental_results.md')
     lines = [
         "# Kết Quả Thực Nghiệm & Đối Chiếu Giả Thuyết (IS254.R11)",
@@ -332,6 +332,28 @@ def _write_markdown_report(df_summary: pd.DataFrame, sample_exp: dict | None, n_
             lines.append(
                 f"| {i} | `{item['factor']}` | `{item['value']}` | **{sign}{item['delta_prob']*100:.2f}%** |"
             )
+
+    # So sánh cặp trên cùng fold: loại bỏ biến động do cách chia dữ liệu khi so hai mô hình
+    lines.extend([
+        "",
+        "---",
+        "",
+        "## 4. So sánh cặp theo từng fold (A − B)",
+        "",
+        "Mỗi ô: hiệu số trung bình ± độ lệch chuẩn qua các fold, trong ngoặc là số fold A > B. "
+        "Phân tích giả thuyết H1, H2, H3 dựa trên bảng này: xem [hypothesis_analysis.md](hypothesis_analysis.md).",
+        "",
+        "| Tuần | A − B | ΔAUC-ROC | ΔF1 | ΔRecall |",
+        "| :-: | :--- | :-: | :-: | :-: |",
+    ])
+    piv = df_folds.pivot_table(index=['week', 'fold'], columns='model', values=['auc_roc', 'f1', 'recall'])
+    for w in EVAL_WEEKS:
+        for a, b in [('DBN', 'LSTM'), ('LSTM', 'Baseline_RF'), ('LSTM', 'Baseline_LR')]:
+            cells = []
+            for met in ['auc_roc', 'f1', 'recall']:
+                d = (piv[met][a] - piv[met][b]).xs(w, level='week')
+                cells.append(f"{d.mean():+.4f} ± {d.std(ddof=1):.4f} ({int((d > 0).sum())}/{len(d)})")
+            lines.append(f"| T = {w} | {display_name[a]} − {display_name[b]} | " + " | ".join(cells) + " |")
 
     with open(report_path, 'w', encoding='utf-8') as f:
         f.write("\n".join(lines) + "\n")
